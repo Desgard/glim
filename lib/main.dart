@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'features/camera/presentation/screens/camera_screen.dart';
+import 'core/router/app_router.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,12 +23,14 @@ void main() {
   runApp(const ProviderScope(child: GlimApp()));
 }
 
-class GlimApp extends StatelessWidget {
+class GlimApp extends ConsumerWidget {
   const GlimApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
       title: 'Glim',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -38,7 +40,7 @@ class GlimApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const CameraScreen(),
+      routerConfig: router,
     );
   }
 }
