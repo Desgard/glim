@@ -1,6 +1,8 @@
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/focal_length_model.dart';
+
 enum CameraStatus {
   uninitialized,
   initializing,
@@ -13,34 +15,42 @@ class CameraState {
   final CameraController? controller;
   final CameraStatus status;
   final String? errorMessage;
-  final bool isRearCamera;
   final FlashMode flashMode;
   final bool isTakingPicture;
+  final FocalLength focalLength;
+  final double minZoom;
+  final double maxZoom;
 
   const CameraState({
     this.controller,
     this.status = CameraStatus.uninitialized,
     this.errorMessage,
-    this.isRearCamera = true,
     this.flashMode = FlashMode.off,
     this.isTakingPicture = false,
+    this.focalLength = FocalLengths.defaultFocalLength,
+    this.minZoom = 1.0,
+    this.maxZoom = 1.0,
   });
 
   CameraState copyWith({
     CameraController? controller,
     CameraStatus? status,
     String? errorMessage,
-    bool? isRearCamera,
     FlashMode? flashMode,
     bool? isTakingPicture,
+    FocalLength? focalLength,
+    double? minZoom,
+    double? maxZoom,
   }) {
     return CameraState(
       controller: controller ?? this.controller,
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
-      isRearCamera: isRearCamera ?? this.isRearCamera,
       flashMode: flashMode ?? this.flashMode,
       isTakingPicture: isTakingPicture ?? this.isTakingPicture,
+      focalLength: focalLength ?? this.focalLength,
+      minZoom: minZoom ?? this.minZoom,
+      maxZoom: maxZoom ?? this.maxZoom,
     );
   }
 }
@@ -63,7 +73,13 @@ class CameraNotifier extends StateNotifier<CameraState> {
         return;
       }
 
-      await _initializeController(_cameras.first);
+      // Only use back camera
+      final backCamera = _cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
+        orElse: () => _cameras.first,
+      );
+
+      await _initializeController(backCamera);
     } catch (e) {
       state = state.copyWith(
         status: CameraStatus.error,
@@ -84,10 +100,19 @@ class CameraNotifier extends StateNotifier<CameraState> {
       await controller.initialize();
       await controller.setFlashMode(state.flashMode);
 
+      // Get zoom range
+      final minZoom = await controller.getMinZoomLevel();
+      final maxZoom = await controller.getMaxZoomLevel();
+
+      // Apply default focal length zoom
+      final defaultZoom = state.focalLength.zoomLevel.clamp(minZoom, maxZoom);
+      await controller.setZoomLevel(defaultZoom);
+
       state = state.copyWith(
         controller: controller,
         status: CameraStatus.ready,
-        isRearCamera: camera.lensDirection == CameraLensDirection.back,
+        minZoom: minZoom,
+        maxZoom: maxZoom,
       );
     } catch (e) {
       state = state.copyWith(
@@ -97,21 +122,12 @@ class CameraNotifier extends StateNotifier<CameraState> {
     }
   }
 
-  Future<void> switchCamera() async {
-    if (_cameras.length < 2) return;
+  Future<void> setFocalLength(FocalLength focalLength) async {
+    if (state.controller == null) return;
 
-    final currentDirection = state.isRearCamera
-        ? CameraLensDirection.back
-        : CameraLensDirection.front;
-
-    final newCamera = _cameras.firstWhere(
-      (camera) => camera.lensDirection != currentDirection,
-      orElse: () => _cameras.first,
-    );
-
-    await state.controller?.dispose();
-    state = state.copyWith(status: CameraStatus.initializing);
-    await _initializeController(newCamera);
+    final zoomLevel = focalLength.zoomLevel.clamp(state.minZoom, state.maxZoom);
+    await state.controller!.setZoomLevel(zoomLevel);
+    state = state.copyWith(focalLength: focalLength);
   }
 
   Future<void> toggleFlash() async {

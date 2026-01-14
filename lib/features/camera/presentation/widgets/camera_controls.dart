@@ -3,19 +3,15 @@ import 'package:flutter/material.dart';
 
 class CameraControls extends StatelessWidget {
   final FlashMode flashMode;
-  final bool isRearCamera;
   final bool isTakingPicture;
   final VoidCallback onCapture;
-  final VoidCallback onSwitchCamera;
   final VoidCallback onToggleFlash;
 
   const CameraControls({
     super.key,
     required this.flashMode,
-    required this.isRearCamera,
     required this.isTakingPicture,
     required this.onCapture,
-    required this.onSwitchCamera,
     required this.onToggleFlash,
   });
 
@@ -52,11 +48,8 @@ class CameraControls extends StatelessWidget {
             isLoading: isTakingPicture,
           ),
 
-          // Switch camera
-          _ControlButton(
-            icon: Icons.flip_camera_ios,
-            onPressed: onSwitchCamera,
-          ),
+          // Placeholder for balance
+          const SizedBox(width: 48),
         ],
       ),
     );

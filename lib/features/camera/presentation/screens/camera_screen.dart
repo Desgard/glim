@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../../core/utils/permission_utils.dart';
 import '../../providers/camera_provider.dart';
+import '../../models/filter_model.dart';
+import '../../providers/filter_provider.dart';
 import '../widgets/camera_controls.dart';
 import '../widgets/camera_preview.dart';
+import '../widgets/filter_selector.dart';
+import '../widgets/focal_length_selector.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({super.key});
@@ -55,9 +61,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
   Future<void> _onCapture() async {
     final file = await ref.read(cameraProvider.notifier).takePicture();
     if (file != null && mounted) {
-      // TODO: Navigate to preview/edit screen with the captured image
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Photo saved: ${file.path}')),
+      final filter = ref.read(filterProvider).selectedFilter;
+      context.push(
+        AppRoutes.preview,
+        extra: PreviewParams(imagePath: file.path, filter: filter),
       );
     }
   }
@@ -139,21 +146,40 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
   }
 
   Widget _buildCameraView(CameraState cameraState) {
+    final filterState = ref.watch(filterProvider);
+
     return Column(
       children: [
         Expanded(
-          child: CameraPreviewWidget(
-            controller: cameraState.controller!,
+          child: Stack(
+            children: [
+              CameraPreviewWidget(
+                controller: cameraState.controller!,
+                filter: filterState.selectedFilter,
+              ),
+              // Focal length selector at bottom of preview
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 16,
+                child: Center(
+                  child: FocalLengthSelector(
+                    selectedFocalLength: cameraState.focalLength,
+                    onFocalLengthChanged: (focalLength) {
+                      ref.read(cameraProvider.notifier).setFocalLength(focalLength);
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+        const FilterSelector(),
+        const SizedBox(height: 8),
         CameraControls(
           flashMode: cameraState.flashMode,
-          isRearCamera: cameraState.isRearCamera,
           isTakingPicture: cameraState.isTakingPicture,
           onCapture: _onCapture,
-          onSwitchCamera: () {
-            ref.read(cameraProvider.notifier).switchCamera();
-          },
           onToggleFlash: () {
             ref.read(cameraProvider.notifier).toggleFlash();
           },
@@ -161,4 +187,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen>
       ],
     );
   }
+}
+
+/// Parameters for preview screen
+class PreviewParams {
+  final String imagePath;
+  final PhotoFilter filter;
+
+  const PreviewParams({
+    required this.imagePath,
+    required this.filter,
+  });
 }

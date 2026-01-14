@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/camera/presentation/screens/camera_screen.dart';
+import '../../features/camera/presentation/screens/preview_screen.dart';
 
 /// Route paths constants
 abstract class AppRoutes {
@@ -23,25 +24,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'camera',
         builder: (context, state) => const CameraScreen(),
       ),
-      // Add more routes as needed:
-      // GoRoute(
-      //   path: AppRoutes.gallery,
-      //   name: 'gallery',
-      //   builder: (context, state) => const GalleryScreen(),
-      // ),
-      // GoRoute(
-      //   path: AppRoutes.settings,
-      //   name: 'settings',
-      //   builder: (context, state) => const SettingsScreen(),
-      // ),
-      // GoRoute(
-      //   path: '${AppRoutes.preview}/:photoId',
-      //   name: 'preview',
-      //   builder: (context, state) {
-      //     final photoId = state.pathParameters['photoId']!;
-      //     return PreviewScreen(photoId: photoId);
-      //   },
-      // ),
+      GoRoute(
+        path: AppRoutes.preview,
+        name: 'preview',
+        builder: (context, state) {
+          final params = state.extra as PreviewParams;
+          return PreviewScreen(
+            imagePath: params.imagePath,
+            filter: params.filter,
+          );
+        },
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
